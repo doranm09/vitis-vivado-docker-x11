@@ -1,0 +1,15 @@
+.env
+
+# Keep large/proprietary installer payloads and user work out of Git.
+installers/*
+!installers/.gitkeep
+workspace/*
+!workspace/.gitkeep
+licenses/*
+!licenses/.gitkeep
+
+# Archive and installer payloads.
+*.zip
+*.tar.gz
+*.tgz
+*.bin

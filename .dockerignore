@@ -1,0 +1,11 @@
+# Keep the Docker build context small. The installer is mounted at runtime,
+# not copied into the image.
+installers/*
+workspace/*
+licenses/*
+.git
+.gitignore
+*.zip
+*.tar.gz
+*.tgz
+*.bin

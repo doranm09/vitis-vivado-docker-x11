@@ -1,0 +1,20 @@
+# Example only. Prefer generating a real config with:
+#   ./xsetup -b ConfigGen
+# and saving it as config/install_config.txt.
+#
+# The exact module names can vary by installer/release/media.
+
+Edition=Vitis Unified Software Platform
+Product=Vitis
+Destination=/opt/Xilinx
+
+# Choose device families/tools. 1 = selected, 0 = not selected.
+# Edit based on your boards. For ZCU102/Ultra96/Versal work, you likely want
+# Zynq UltraScale+ MPSoC and/or Versal selected.
+Modules=DocNav:0,Zynq UltraScale+ MPSoC:1,Zynq-7000:1,Versal:1,MicroBlaze:1,Artix-7:0,Kintex-7:0,Spartan-7:0,Vitis HLS:1,Vitis Model Composer:0
+
+# Avoid interactive post-install actions inside the container.
+InstallOptions=Acquire or Manage a License Key:0,Enable WebTalk to send usage statistics to Xilinx:0
+CreateProgramGroupShortcuts=0
+CreateShortcutsForAllUsers=0
+ProgramGroupFolder=Xilinx Design Tools

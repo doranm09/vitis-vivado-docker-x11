@@ -1,0 +1,170 @@
+services:
+  # One-shot service: installs Vitis/Vivado into the named Docker volume.
+  # Run with: docker compose run --rm xilinx-install
+  xilinx-install:
+    build:
+      context: .
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    image: local/vitis-vivado-2022.2-ubuntu22.04-x11:base
+    container_name: xilinx-2022.2-install
+    user: root
+    environment:
+      XILINX_VERSION: "2022.2"
+      XILINX_INSTALL_DIR: /opt/Xilinx
+      # Used only when config/install_config.txt is not present.
+      XILINX_EDITION: "Vitis Unified Software Platform"
+    volumes:
+      - xilinx-2022_2:/opt/Xilinx
+      - ./installers:/installers:ro
+      - ./config:/config:ro
+    command: ["/usr/local/bin/install-vitis-vivado.sh"]
+
+  # Plain interactive shell with Vitis/Vivado available from the persisted install volume.
+  # Run with: docker compose run --rm xilinx-shell
+  xilinx-shell:
+    build:
+      context: .
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    image: local/vitis-vivado-2022.2-ubuntu22.04-x11:base
+    user: xilinx
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    environment:
+      XILINX_VERSION: "2022.2"
+      XILINX_INSTALL_DIR: /opt/Xilinx
+      XILINXD_LICENSE_FILE: ${XILINXD_LICENSE_FILE:-}
+      LM_LICENSE_FILE: ${LM_LICENSE_FILE:-}
+      QT_X11_NO_MITSHM: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    volumes:
+      - xilinx-2022_2:/opt/Xilinx
+      - xilinx-home-2022_2:/home/xilinx
+      - ./workspace:/workspace
+      - ./licenses:/licenses:ro
+    command: ["bash"]
+
+  # Linux desktop X11 GUI using the host X11 Unix socket.
+  # Host setup, before running this service:
+  #   xhost +SI:localuser:$(id -un)
+  # Run Vivado GUI:
+  #   docker compose run --rm xilinx-x11 vivado
+  # Run Vitis GUI:
+  #   docker compose run --rm xilinx-x11 vitis
+  xilinx-x11:
+    build:
+      context: .
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    image: local/vitis-vivado-2022.2-ubuntu22.04-x11:base
+    user: xilinx
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    shm_size: "2gb"
+    environment:
+      XILINX_VERSION: "2022.2"
+      XILINX_INSTALL_DIR: /opt/Xilinx
+      DISPLAY: ${DISPLAY:-:0}
+      XILINXD_LICENSE_FILE: ${XILINXD_LICENSE_FILE:-}
+      LM_LICENSE_FILE: ${LM_LICENSE_FILE:-}
+      QT_X11_NO_MITSHM: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      NO_AT_BRIDGE: "1"
+    volumes:
+      - xilinx-2022_2:/opt/Xilinx
+      - xilinx-home-2022_2:/home/xilinx
+      - ./workspace:/workspace
+      - ./licenses:/licenses:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    command: ["bash"]
+
+  # Linux desktop X11 GUI plus USB/JTAG access.
+  # Use this for Vivado Hardware Manager / hw_server / xsdb / xsct workflows.
+  # Host setup, before running this service:
+  #   xhost +SI:localuser:$(id -un)
+  # Run:
+  #   docker compose run --rm xilinx-x11-hw vivado
+  xilinx-x11-hw:
+    build:
+      context: .
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    image: local/vitis-vivado-2022.2-ubuntu22.04-x11:base
+    user: xilinx
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    shm_size: "2gb"
+    environment:
+      XILINX_VERSION: "2022.2"
+      XILINX_INSTALL_DIR: /opt/Xilinx
+      DISPLAY: ${DISPLAY:-:0}
+      XILINXD_LICENSE_FILE: ${XILINXD_LICENSE_FILE:-}
+      LM_LICENSE_FILE: ${LM_LICENSE_FILE:-}
+      QT_X11_NO_MITSHM: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      NO_AT_BRIDGE: "1"
+    volumes:
+      - xilinx-2022_2:/opt/Xilinx
+      - xilinx-home-2022_2:/home/xilinx
+      - ./workspace:/workspace
+      - ./licenses:/licenses:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev/bus/usb:/dev/bus/usb:rw
+    device_cgroup_rules:
+      - "c 189:* rwm"   # USB bus devices, e.g. JTAG/debug probes under /dev/bus/usb
+      - "c 188:* rwm"   # USB serial converters, /dev/ttyUSB*
+      - "c 166:* rwm"   # ACM devices, /dev/ttyACM*
+    group_add:
+      - "${DIALOUT_GID:-20}"
+      - "${PLUGDEV_GID:-46}"
+    command: ["bash"]
+
+  # Optional: Linux SSH X11 forwarding path.
+  # Use this only when DISPLAY looks like localhost:10.0 from ssh -X/-Y.
+  # Requires a valid Xauthority file visible to the container.
+  # Example:
+  #   docker compose run --rm xilinx-x11-ssh vivado
+  xilinx-x11-ssh:
+    build:
+      context: .
+      args:
+        USER_UID: ${HOST_UID:-1000}
+        USER_GID: ${HOST_GID:-1000}
+    image: local/vitis-vivado-2022.2-ubuntu22.04-x11:base
+    user: xilinx
+    network_mode: host
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    shm_size: "2gb"
+    environment:
+      XILINX_VERSION: "2022.2"
+      XILINX_INSTALL_DIR: /opt/Xilinx
+      DISPLAY: ${DISPLAY:-}
+      XAUTHORITY: /home/xilinx/.Xauthority
+      XILINXD_LICENSE_FILE: ${XILINXD_LICENSE_FILE:-}
+      LM_LICENSE_FILE: ${LM_LICENSE_FILE:-}
+      QT_X11_NO_MITSHM: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      NO_AT_BRIDGE: "1"
+    volumes:
+      - xilinx-2022_2:/opt/Xilinx
+      - xilinx-home-2022_2:/home/xilinx
+      - ./workspace:/workspace
+      - ./licenses:/licenses:ro
+      - ${HOST_XAUTHORITY:-/tmp/.docker.xauth}:/home/xilinx/.Xauthority:ro
+    command: ["bash"]
+
+volumes:
+  xilinx-2022_2:
+    name: xilinx-2022_2
+  xilinx-home-2022_2:
+    name: xilinx-home-2022_2
